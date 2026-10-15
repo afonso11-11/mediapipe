@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face Vision AI</title>
+  <meta name="description" content="Demonstração interativa de detecção e rastreamento facial em tempo real com MediaPipe Face Landmarker. Processamento local, sem identificação de pessoas.">
+  <meta name="color-scheme" content="dark light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a1224'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='%2322d3ee' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%2334d399'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#demo">Ir para a demonstração</a>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header" id="siteHeader">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 11V6a2 2 0 0 1 2-2h5M21 4h5a2 2 0 0 1 2 2v5M28 21v5a2 2 0 0 1-2 2h-5M11 28H6a2 2 0 0 1-2-2v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="16" r="2.5" fill="var(--green)"/></svg>
+      <div class="brand-text">
+        <strong>FACE VISION AI</strong>
+        <span>MediaPipe Face Landmarker</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="pill" id="cameraPill" data-state="off" role="status"><i class="dot" aria-hidden="true"></i><span>CÂMERA DESATIVADA</span></span>
+      <span class="pill" id="modelPill" data-state="loading" role="status"><i class="dot" aria-hidden="true"></i><span>CARREGANDO MODELO</span></span>
+      <button class="btn btn-ghost btn-sm" id="aboutBtn" type="button">Sobre o projeto</button>
+      <button class="btn btn-ghost btn-icon btn-sm" id="themeBtn" type="button" aria-label="Alternar entre tema escuro e claro" title="Alternar tema">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ HERO ============ -->
+    <section class="hero" id="hero" aria-labelledby="heroTitle">
+      <div class="container hero-inner">
+        <p class="eyebrow">Visão computacional · Tempo real · 100% no navegador</p>
+        <h1 id="heroTitle">Reconhecimento Facial em <span class="grad">Tempo Real</span></h1>
+        <p class="hero-sub">Uma demonstração interativa de visão computacional utilizando MediaPipe Face Landmarker.</p>
+        <p class="hero-text">Observe como algoritmos de visão computacional conseguem localizar pontos de referência do rosto em tempo real através da câmera do dispositivo.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg" id="heroStartBtn" type="button">INICIAR CÂMERA</button>
+          <a class="btn btn-outline btn-lg" href="#how">COMO FUNCIONA</a>
+        </div>
+        <p class="hero-note">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Detecção e rastreamento de pontos faciais — <strong>não</strong> identifica quem é a pessoa.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ DEMO ============ -->
+    <section class="section" id="demo" aria-labelledby="demoTitle">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="demoTitle">ANÁLISE FACIAL EM TEMPO REAL</h2>
+          <p>Rastreamento de <strong>uma face principal</strong> por vez (o modelo detecta até 2 rostos para avisar quando houver mais de um).</p>
+        </div>
+
+        <div id="alertBox" class="alert" role="alert" hidden>
+          <span id="alertText"></span>
+          <button class="alert-close" id="alertClose" type="button" aria-label="Fechar mensagem">×</button>
+        </div>
+
+        <div class="demo-grid">
+          <!-- Painel da câmera -->
+          <div class="card stage-card">
+            <div class="stage" id="stage">
+              <div class="viewport" id="viewport" style="--ar:1.7778">
+                <video id="video" playsinline muted autoplay aria-label="Vídeo da câmera"></video>
+                <canvas id="overlay" aria-label="Camada de landmarks faciais" role="img"></canvas>
+
+                <div class="placeholder" id="placeholder">
+                  <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><circle cx="32" cy="32" r="18" fill="none" stroke="currentColor" stroke-width="2" opacity=".5"/><path d="M8 20V12a4 4 0 0 1 4-4h8M44 8h8a4 4 0 0 1 4 4v8M56 44v8a4 4 0 0 1-4 4h-8M20 56h-8a4 4 0 0 1-4-4v-8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="25" cy="29" r="2" fill="currentColor"/><circle cx="39" cy="29" r="2" fill="currentColor"/><path d="M25 39c4 4 10 4 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <p><strong>Câmera desativada</strong></p>
+                  <p class="muted">Clique em “Iniciar câmera”. O navegador vai pedir sua permissão.</p>
+                  <button class="btn btn-primary" id="placeholderStartBtn" type="button">INICIAR CÂMERA</button>
+                </div>
+
+                <div class="scanline" id="scanline" aria-hidden="true"></div>
+                <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+
+                <div class="hud" id="hud" aria-hidden="true">
+                  <span>FPS <b data-hud="fps">--</b></span>
+                  <span>ROSTOS <b data-hud="faces">0</b></span>
+                  <span data-hud="status">AGUARDANDO</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="controls" id="controls">
+              <div class="btn-row" role="group" aria-label="Controles da câmera">
+                <button class="btn btn-primary" id="startBtn" type="button">INICIAR CÂMERA</button>
+                <button class="btn btn-outline" id="stopBtn" type="button" disabled>PARAR CÂMERA</button>
+                <button class="btn btn-outline" id="pauseBtn" type="button" disabled>PAUSAR ANÁLISE</button>
+                <button class="btn btn-outline" id="restartBtn" type="button">REINICIAR</button>
+                <button class="btn btn-outline" id="fullscreenBtn" type="button">FULLSCREEN</button>
+                <button class="btn btn-outline" id="captureBtn" type="button" disabled>CAPTURAR FRAME</button>
+              </div>
+
+              <div class="toggle-row" role="group" aria-label="Camadas de visualização">
+                <label class="check"><input type="checkbox" id="optLandmarks" checked><span>Mostrar landmarks</span></label>
+                <label class="check"><input type="checkbox" id="optMesh" checked><span>Mostrar malha facial</span></label>
+                <label class="check"><input type="checkbox" id="optContours" checked><span>Mostrar contornos</span></label>
+                <label class="check"><input type="checkbox" id="optLabels" checked><span>Mostrar regiões</span></label>
+              </div>
+
+              <div class="btn-row" role="group" aria-label="Modos de exibição">
+                <button class="btn btn-toggle" id="inspectBtn" type="button" aria-pressed="false">INSPECT LANDMARKS</button>
+                <button class="btn btn-toggle" id="demoModeBtn" type="button" aria-pressed="false">DEMO MODE</button>
+                <button class="btn btn-toggle" id="presentationBtn" type="button" aria-pressed="false">PRESENTATION MODE</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Painel lateral -->
+          <aside class="side" aria-label="Estatísticas em tempo real">
+            <div class="card">
+              <h3 class="card-title">FACE ANALYTICS</h3>
+              <div class="stat-grid">
+                <div class="stat"><span class="stat-label">Rostos detectados</span><span class="stat-value" data-bind="faces">0</span></div>
+                <div class="stat"><span class="stat-label">Landmarks</span><span class="stat-value" data-bind="landmarks">--</span></div>
+                <div class="stat"><span class="stat-label">FPS</span><span class="stat-value" data-bind="fps">--</span></div>
+                <div class="stat"><span class="stat-label">Processamento</span><span class="stat-value" data-bind="latency">--</span></div>
+                <div class="stat wide">
+                  <span class="stat-label">Taxa de detecção <em>(estimativa: últimos 30 frames)</em></span>
+                  <span class="stat-value" data-bind="rate">--</span>
+                  <span class="meter"><i data-bind-width="rate"></i></span>
+                </div>
+              </div>
+              <div class="status-line"><span class="status-badge" data-bind="status" data-state="idle">AGUARDANDO CÂMERA</span></div>
+              <p class="footnote">O Face Landmarker não retorna um “percentual de confiança” por quadro; por isso a taxa acima é calculada pelo próprio sistema.</p>
+            </div>
+
+            <div class="card secondary perf-card">
+              <h3 class="card-title">REAL-TIME PERFORMANCE</h3>
+              <dl class="kv">
+                <div><dt>FPS</dt><dd data-bind="perfFps">--</dd></div>
+                <div><dt>Frame processing</dt><dd data-bind="perfFrame">--</dd></div>
+                <div><dt>Detection latency</dt><dd data-bind="perfLatency">--</dd></div>
+                <div><dt>Model status</dt><dd data-bind="perfModel">Carregando…</dd></div>
+                <div><dt>Delegate</dt><dd data-bind="perfDelegate">--</dd></div>
+                <div><dt>Resolução</dt><dd data-bind="perfRes">--</dd></div>
+              </dl>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MOVIMENTO + EXPRESSÕES ============ -->
+    <section class="section secondary" id="analysis" aria-label="Análise de movimento e expressões">
+      <div class="container grid-2">
+        <div class="card" id="movementCard">
+          <h3 class="card-title">FACE MOVEMENT</h3>
+          <p class="footnote top">Estimativas aproximadas calculadas a partir dos landmarks. Esquerda/direita seguem o que você vê na tela (espelhado). Sem precisão médica ou biométrica.</p>
+          <ul class="move-list">
+            <li>
+              <div class="move-head"><span>HEAD ROTATION</span><b data-bind="yaw">--</b></div>
+              <span class="track"><i data-bind-pos="yaw"></i></span><small>LEFT / RIGHT</small>
+            </li>
+            <li>
+              <div class="move-head"><span>HEAD TILT</span><b data-bind="tilt">--</b></div>
+              <span class="track"><i data-bind-pos="tilt"></i></span><small>LEFT / RIGHT</small>
+            </li>
+            <li>
+              <div class="move-head"><span>HEAD PITCH</span><b data-bind="pitch">--</b></div>
+              <span class="track"><i data-bind-pos="pitch"></i></span><small>UP / DOWN</small>
+            </li>
+            <li class="plain">
+              <div class="move-head"><span>MOUTH</span><b data-bind="mouth">--</b></div><small>OPEN / CLOSED</small>
+            </li>
+            <li class="plain">
+              <div class="move-head"><span>EYES</span><b data-bind="eyes">--</b></div><small>OPEN / CLOSED</small>
+            </li>
+            <li class="plain">
+              <div class="move-head"><span>EYE MOVEMENT (íris)</span><b data-bind="gaze">--</b></div><small>LEFT / RIGHT · UP / DOWN</small>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card" id="expressionCard">
+          <h3 class="card-title">FACIAL EXPRESSION ANALYSIS</h3>
+          <p class="footnote top">Pontuações reais de blendshapes retornadas pelo modelo (0–100%). “Neutro” é derivado: 1 − maior pontuação entre as demais.</p>
+          <ul class="bars" id="expressionBars"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMO FUNCIONA ============ -->
+    <section class="section secondary" id="how" aria-labelledby="howTitle">
+      <div class="container">
+        <div class="section-head">
+          <h2 id="howTitle">COMO FUNCIONA</h2>
+          <p>Do pixel ao ponto de referência: o caminho de cada quadro de vídeo.</p>
+        </div>
+        <ol class="flow">
+          <li class="card step">
+            <span class="step-icon"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></span>
+            <h3>1. Câmera</h3><p>A câmera captura os frames em tempo real através da API <code>getUserMedia</code>.</p>
+          </li>
+          <li class="card step">
+            <span class="step-icon"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 5v14" stroke="currentColor" stroke-width="1.8" fill="none"/></svg></span>
+            <h3>2. Captura do frame</h3><p>Cada quadro do vídeo é entregue ao modelo dentro do próprio navegador.</p>
+          </li>
+          <li class="card step">
+            <span class="step-icon"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg></span>
+            <h3>3. MediaPipe</h3><p>O modelo analisa cada frame e procura uma face na imagem.</p>
+          </li>
+          <li class="card step">
+            <span class="step-icon"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10.5" r="1" fill="currentColor"/><circle cx="15" cy="10.5" r="1" fill="currentColor"/><circle cx="12" cy="13.5" r="1" fill="currentColor"/><circle cx="9.5" cy="16" r="1" fill="currentColor"/><circle cx="14.5" cy="16" r="1" fill="currentColor"/></svg></span>
+            <h3>4. Face Landmarker</h3><p>O sistema localiza pontos de referência da face (478 por rosto, incluindo as íris).</p>
+          </li>
+          <li class="card step">
+            <span class="step-icon"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 19V5M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 3 3 5-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <h3>5. Análise</h3><p>Os landmarks são utilizados para interpretar movimentos e características geométricas.</p>
+          </li>
+          <li class="card step">
+            <span class="step-icon"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></span>
+            <h3>6. Visualização</h3><p>Os resultados são desenhados sobre o vídeo e nos painéis de estatísticas.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ TECNOLOGIA ============ -->
+    <section class="section secondary" id="tech" aria-labelledby="techTitle">
+      <div class="container grid-2 tech">
+        <div>
+          <h2 id="techTitle">TECNOLOGIA UTILIZADA</h2>
+          <p>O MediaPipe é uma plataforma desenvolvida pelo Google para aplicações de percepção e visão computacional. O Face Landmarker permite detectar landmarks faciais e outras informações relacionadas à face em aplicações compatíveis.</p>
+          <p class="muted">Esta demonstração usa o pacote <code>@mediapipe/tasks-vision</code> (MediaPipe Tasks) e o modelo oficial <code>face_landmarker.task</code>, executados localmente no navegador via WebAssembly/WebGL.</p>
+        </div>
+        <div class="card tech-card" aria-label="Resumo da tecnologia">
+          <span class="tech-k">MEDIA PIPE</span>
+          <span class="tech-v">FACE LANDMARKER</span>
+          <span class="tech-s">REAL-TIME COMPUTER VISION</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRIVACIDADE ============ -->
+    <section class="section secondary" id="privacy" aria-labelledby="privacyTitle">
+      <div class="container">
+        <div class="card privacy">
+          <h2 id="privacyTitle">PRIVACIDADE E SEGURANÇA</h2>
+          <p>Todo o processamento da demonstração é realizado localmente no navegador sempre que possível. O sistema não precisa enviar a imagem da câmera para um servidor para realizar a demonstração.</p>
+          <ul class="checks">
+            <li>Sem upload automático da câmera</li>
+            <li>Sem banco de dados facial</li>
+            <li>Sem identificação de pessoas</li>
+            <li>Sem armazenamento automático de imagens</li>
+            <li>Processamento local</li>
+          </ul>
+          <p class="muted">O navegador sempre solicita a sua permissão antes de acessar a câmera, e você pode revogá-la quando quiser. Arquivos do modelo e da biblioteca são baixados uma vez de CDNs públicas; nenhuma imagem sua é enviada.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>FACE VISION AI</strong>
+        <p>Interactive Face Tracking Demonstration</p>
+        <p class="muted">Powered by MediaPipe · Projeto educacional</p>
+      </div>
+      <p class="disclaimer">Esta aplicação demonstra detecção e rastreamento facial e não realiza identificação da identidade das pessoas.</p>
+    </div>
+  </footer>
+
+  <button class="btn btn-primary exit-presentation" id="exitPresentationBtn" type="button">Sair do modo apresentação (Esc)</button>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+  <dialog id="aboutDialog" aria-labelledby="aboutTitle">
+    <form method="dialog">
+      <h2 id="aboutTitle">Sobre o projeto</h2>
+      <p><strong>Face Vision AI</strong> é uma demonstração educacional de visão computacional. Ele realiza <strong>detecção + landmarks + rastreamento + análise de movimento facial</strong>.</p>
+      <p>Não realiza identificação de pessoas, não usa banco de dados de rostos e não armazena imagens. As capturas de frame só acontecem quando você clica em “Capturar frame” e são baixadas diretamente para o seu dispositivo.</p>
+      <p class="muted">Tecnologias: HTML5, CSS3, JavaScript (ES Modules), Canvas 2D, getUserMedia e MediaPipe Tasks Vision.</p>
+      <button class="btn btn-primary" value="close">Fechar</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
